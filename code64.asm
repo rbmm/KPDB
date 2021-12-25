@@ -10,7 +10,7 @@ _TEXT segment 'CODE'
 	mov rdi,rdx
 	ret
 @@0:
-	xor eax,eax
+	mov eax,ecx
 	ret
 ?findDWORD@NT@@YAPEAK_KPEBKK@Z endp
 _TEXT ENDS

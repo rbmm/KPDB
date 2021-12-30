@@ -32,7 +32,7 @@ public:
 
 	void* operator new(size_t s, ULONG nSymbols, ULONG cbNames)
 	{
-		if (PVOID pv = ExAllocatePool(PagedPool, s + nSymbols * sizeof(ULARGE_INTEGER) + cbNames))
+		if (PVOID pv = ExAllocatePool(NonPagedPoolNx, s + nSymbols * sizeof(ULARGE_INTEGER) + cbNames))
 		{
 			reinterpret_cast<CModule*>(pv)->_nSymbols = nSymbols;
 			return pv;

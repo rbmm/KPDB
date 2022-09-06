@@ -344,13 +344,13 @@ ULONG ParsePDB(PdbFileHeader* header, SIZE_T ViewSize, PGUID signature, DWORD ag
 				return __LINE__;
 			}
 
-			if (sym.psh->type == S_PUB32 && sym.pbs->seg <= nSections)
+			if (sym.psh->type == S_PUB32 && --(sym.pbs->seg) < nSections)
 			{
 				PCSTR name = sym.pbs->name;
 				PBYTE pb = sym.pb + len;
 				if ((PBYTE)name < pb)
 				{
-					ULONG rva = sym.pbs->off + pish[sym.pbs->seg - 1].VirtualAddress;
+					ULONG rva = sym.pbs->off + pish[sym.pbs->seg].VirtualAddress;
 
 					if (pvOmapFromSrc)
 					{

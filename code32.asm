@@ -2,19 +2,21 @@
 
 _TEXT segment
 
-?findDWORD@NT@@YIPAKKPBKK@Z proc
-	jecxz @@0
-	xchg edi,edx
-	mov eax,[esp + 4]
-	repne scasd
-	lea eax,[edi-4]
-	cmovne eax,ecx
+?strnlen@NT@@YIIIPBD@Z proc
+	xor eax,eax
+	jecxz @@2
+	push edi
 	mov edi,edx
-	ret 4
-@@0:
-	mov eax,ecx
-	ret 4
-?findDWORD@NT@@YIPAKKPBKK@Z endp
+	repne scasb
+	jne @@1
+	dec edi
+@@1:
+	sub edi,edx
+	mov eax,edi
+	pop edi
+@@2:
+	ret
+?strnlen@NT@@YIIIPBD@Z endp
 
 _TEXT ends
 end

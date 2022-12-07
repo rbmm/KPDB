@@ -1,12 +1,14 @@
 #pragma once
 
+#include "pdb_util.h"
+
 class CModule : LIST_ENTRY
 {
 	PVOID _ImageBase;
 	ULONG _size;
 	ULONG _nSymbols;
 	char _name[32];
-	ULARGE_INTEGER _offsets[/*_nSymbols { rva, ofs }*/];
+	RVAOFS _Symbols[];
 	//CHAR Names[];
 	void Init(PCSTR name, PVOID ImageBase, ULONG size)
 	{
@@ -32,7 +34,7 @@ public:
 
 	void* operator new(size_t s, ULONG nSymbols, ULONG cbNames)
 	{
-		if (PVOID pv = ExAllocatePool(NonPagedPoolNx, s + nSymbols * sizeof(ULARGE_INTEGER) + cbNames))
+		if (PVOID pv = ExAllocatePool(NonPagedPoolNx, s + nSymbols * sizeof(RVAOFS) + cbNames))
 		{
 			reinterpret_cast<CModule*>(pv)->_nSymbols = nSymbols;
 			return pv;

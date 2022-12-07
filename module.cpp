@@ -28,34 +28,42 @@ PCSTR CModule::GetNameFromVa(PVOID pv, PULONG pdisp, PCSTR* ppname)
 
 PCSTR CModule::GetNameFromRva(ULONG rva, PULONG pdisp, PCSTR* ppname)
 {
-	* ppname = _name;
-	PULARGE_INTEGER offsets = _offsets;
-	ULONG a = 0, b = _nSymbols, o, ofs;
+	*ppname = _name;
+	ULONG a = 0, b = _nSymbols, o, s_rva;
+
+	if (!b)
+	{
+		*pdisp = rva;
+		return "MZ";
+	}
+
+	RVAOFS* Symbols = _Symbols;
 
 	do 
 	{
-		if (rva == (ofs = offsets[o = (a + b) >> 1].LowPart))
+		if (rva == (s_rva = Symbols[o = (a + b) >> 1].rva))
 		{
 			*pdisp = 0;
-			return RtlOffsetToPointer(this, offsets[o].HighPart);
+__0:
+			return RtlOffsetToPointer(this, Symbols[o].ofs);
 		}
 
-		rva < ofs ? b = o : a = o + 1;
+		rva < s_rva ? b = o : a = o + 1;
 
 	} while (a < b);
 
-	if (rva < ofs)
+	if (rva < s_rva)
 	{
 		if (!o)
 		{
 			return 0;
 		}
-		ofs = offsets[--o].LowPart;
+		s_rva = Symbols[--o].rva;
 	}
 
-	*pdisp = (ULONG)rva - ofs;
+	*pdisp = (ULONG)rva - s_rva;
 
-	return RtlOffsetToPointer(this, offsets[o].HighPart);
+	goto __0;
 }
 
 NTSTATUS CModule::Create(PCSTR name, PVOID ImageBase, ULONG size)
@@ -65,74 +73,68 @@ NTSTATUS CModule::Create(PCSTR name, PVOID ImageBase, ULONG size)
 	struct Z : SymStore 
 	{
 		CModule* _pModule = 0;
-		PSTR _psz = 0;
-		PULARGE_INTEGER _pSymbol = 0;
-		ULONG _nSymbols = 0;
-		ULONG _cbNames = 0;
+		CV_INFO_PDB* _lpcvh = 0;
 
-		static int __cdecl cmp(const void* pa, const void* pb)
+		virtual NTSTATUS OnOpenPdb(NTSTATUS status, CV_INFO_PDB* lpcvh)
 		{
-			ULONG a = ((ULARGE_INTEGER*)pa)->LowPart, b = ((ULARGE_INTEGER*)pb)->LowPart;
-			if (a < b) return -1;
-			if (a > b) return +1;
-			return 0;
+			_lpcvh = lpcvh;
+			return status;
 		}
 
-		virtual BOOL EnumSymbolsEnd()
+		virtual void Symbols(_In_ RVAOFS* pSymbols, _In_ ULONG nSymbols, _In_ PSTR names)
 		{
-			CModule * pDll = _pModule;
-			ULONG nSymbols = _nSymbols;
+			ULONG n = nSymbols, cbNames = 0;
 
-			if (!pDll)
+			RVAOFS* p = pSymbols;
+			do 
 			{
-				if (nSymbols)
+				cbNames += (ULONG)strlen(names + p++->ofs) + 1;
+			} while (--n);
+
+			if (CModule* pDll = new(nSymbols, cbNames) CModule)
+			{
+				_pModule = pDll;
+
+				p = pDll->_Symbols;
+				PSTR names_copy = (PSTR)&p[nSymbols];
+				cbNames = RtlPointerToOffset(pDll, names_copy);
+				do 
 				{
-					if (pDll = new(nSymbols, _cbNames) CModule)
-					{
-						_pModule = pDll;
-						_pSymbol = pDll->_offsets;
-						_psz = (PSTR)&pDll->_offsets[nSymbols];
+					p->rva = pSymbols->rva;
+					p++->ofs = cbNames;
+					ULONG ofs = pSymbols++->ofs;
+					PCSTR name = names + ofs;
+					ULONG len = (ULONG)strlen(name) + 1;
+					memcpy(names_copy, name, len);
+					names_copy += len, cbNames += len;
 
-						return FALSE;
-					}
-				}
-
-				return TRUE;
+				} while (--nSymbols);
 			}
-
-			qsort(pDll->_offsets, nSymbols, sizeof(ULARGE_INTEGER), cmp);
-
-			return TRUE;
 		}
 
-		virtual void Symbol(ULONG rva, PCSTR name)
+		static BOOL SpecialSymbol(_In_ PCSTR name)
 		{
-			if ((name[0] == '?' && name[1] == '?') ||
-				(name[0] == 'W' && name[1] == 'P' && name[2] == 'P' && name[3] == '_') ||
-				(name[0] == '_' && name[1] == '_' && name[2] == 'i' && name[3] == 'm' && name[4] == 'p' && name[5] == '_') ||
-				(name[0] == '_' && name[1] == '_' && name[2] == 'h' && name[3] == 'm' && name[4] == 'o' && name[5] == 'd') ||
-				(name[0] == '_' && name[1] == '_' && name[2] == 'I' && name[3] == 'M' && name[4] == 'P' && name[5] == 'O') ||
-				(name[0] == '_' && name[1] == '_' && name[2] == 'D' && name[3] == 'E' && name[4] == 'L' && name[5] == 'A')
-				)
+			// __IMPO
+			// __DELA
+			if (name[0] == '_' && name[1] == '_')
 			{
-				return ;
+				if ((name[2] == 'I' && name[3] == 'M' && name[4] == 'P' && name[5] == 'O') &&
+					(name[2] == 'D' && name[3] == 'E' && name[4] == 'L' && name[5] == 'A'))
+				{
+					return TRUE;
+				}
 			}
 
-			ULONG len = (ULONG)strlen(name) + 1;
+			// WPP_
 
-			CModule * pDll = _pModule;
-
-			if (!pDll)
-			{
-				_nSymbols++;
-				_cbNames += len;
-				return ;
-			}
-
-			_pSymbol->HighPart = RtlPointerToOffset(pDll, memcpy(_psz, name, len));
-			_pSymbol++->LowPart = rva;
-			_psz += len;
+			return name[0] == 'W' && name[1] == 'P' && name[2] == 'P' && name[3] == '_';
 		}
+
+		virtual BOOL IncludeSymbol(_In_ PCSTR name)
+		{
+			return (name[0] != '?' || name[1] != '?') && __super::IncludeSymbol(name) && !SpecialSymbol(name);
+		}
+
 	} ss;
 
 	NTSTATUS status = ss.GetSymbols((HMODULE)ImageBase, L"\\systemroot\\symbols");

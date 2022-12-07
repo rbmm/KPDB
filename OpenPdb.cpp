@@ -64,7 +64,7 @@ NTSTATUS OpenPdb(PHANDLE phFile, PCSTR PdbFileName, PCWSTR NtSymbolPath, PGUID S
 struct PdbFileHeader;
 #include "pdb_util.h"
 
-ULONG ParsePDB(PdbFileHeader* header, SIZE_T ViewSize, PGUID signature, DWORD age, SymStore* pss);
+NTSTATUS ParsePDB(PdbFileHeader* header, SIZE_T ViewSize, PGUID signature, DWORD age, SymStore* pss);
 
 NTSTATUS SymStore::GetSymbols(PCWSTR PdbPath)
 {

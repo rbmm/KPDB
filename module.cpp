@@ -7,6 +7,42 @@ _NT_BEGIN
 
 LIST_ENTRY CModule::s_head = { &s_head, &s_head };
 
+PVOID CModule::GetVaFromName(PCSTR pszModule, PCSTR Name)
+{
+	CModule* p = 0;
+	PLIST_ENTRY entry = &s_head;
+
+	while ((entry = entry->Flink) != &s_head)
+	{
+		p = static_cast<CModule*>(entry);
+
+		if (!_stricmp(p->_name, pszModule))
+		{
+			return p->GetVaFromName(Name);
+		}
+	}
+
+	return 0;
+}
+
+PVOID CModule::GetVaFromName(PCSTR Name)
+{
+	if (ULONG n = _nSymbols)
+	{
+		RVAOFS* Symbols = _Symbols;
+
+		do 
+		{
+			if (!strcmp(Name, RtlOffsetToPointer(this, Symbols->ofs)))
+			{
+				return (PBYTE)_ImageBase + Symbols->rva;
+			}
+		} while (Symbols++, --n);
+	}
+
+	return 0;
+}
+
 PCSTR CModule::GetNameFromVa(PVOID pv, PULONG pdisp, PCSTR* ppname)
 {
 	PLIST_ENTRY entry = &s_head;

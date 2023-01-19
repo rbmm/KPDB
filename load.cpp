@@ -19,7 +19,7 @@ void LoadNtModule(ULONG n, const ULONG ph[])
 	do 
 	{
 		status = STATUS_INSUFF_SERVER_RESOURCES;
-		if (PRTL_PROCESS_MODULES buf = (PRTL_PROCESS_MODULES)ExAllocatePool(PagedPool, cb))
+		if (PRTL_PROCESS_MODULES buf = (PRTL_PROCESS_MODULES)ExAllocatePool(PagedPool, cb += PAGE_SIZE))
 		{
 			if (0 <= (status = NtQuerySystemInformation(SystemModuleInformation, buf, cb, &cb)))
 			{

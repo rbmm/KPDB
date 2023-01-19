@@ -29,6 +29,7 @@ class CModule : LIST_ENTRY
 		DbgPrint("--CModule<%p>(%s) %p\n", this, _name, _ImageBase);
 	}
 
+	PVOID GetVaFromName(PCSTR Name);
 	PCSTR GetNameFromRva(ULONG rva, PULONG pdisp, PCSTR* ppname);
 public:
 
@@ -48,6 +49,7 @@ public:
 	}
 
 	static NTSTATUS Create(PCSTR name, PVOID ImageBase, ULONG size);
+	static PVOID GetVaFromName(PCSTR pszModule, PCSTR Name);
 	static PCSTR GetNameFromVa(PVOID pv, PULONG pdisp, PCSTR* ppname);
 
 	static void Cleanup();

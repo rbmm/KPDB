@@ -1,5 +1,25 @@
 #include "STDAFX.H"
 
+void* __cdecl operator new[](size_t ByteSize)
+{
+	return NT::ExAllocatePool(NT::PagedPool, ByteSize);
+}
+
+void* __cdecl operator new(size_t ByteSize)
+{
+	return NT::ExAllocatePool(NT::PagedPool, ByteSize);
+}
+
+void __cdecl operator delete(void* Buffer)
+{
+	NT::ExFreePool(Buffer);
+}
+
+void __cdecl operator delete[](void* Buffer)
+{
+	NT::ExFreePool(Buffer);
+}
+
 _NT_BEGIN
 
 #include "PDB.h"
@@ -199,7 +219,7 @@ public:
 			return STATUS_INVALID_IMAGE_FORMAT;
 		}
 
-		PULONG pd = (PULONG)LocalAlloc(0, directorySize);
+		PULONG pd = (PULONG)ExAllocatePool(PagedPool, directorySize);
 		if (!pd)
 		{
 			return STATUS_INVALID_IMAGE_FORMAT;
@@ -375,7 +395,7 @@ public:
 	{
 		if (PVOID pv = _BaseAddress)
 		{
-			LocalFree(pv);
+			ExFreePool(pv);
 		}
 	}
 };

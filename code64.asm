@@ -16,5 +16,21 @@ _TEXT segment 'CODE'
 	ret
 ?strnlen@NT@@YA_K_KPEBD@Z endp
 
+?findDWORD@NT@@YAPEAK_KPEBKK@Z proc
+	jrcxz @retz
+	xchg rdi,rdx
+	mov rax,r8
+	repne scasd
+	lea rax, [rdi-4]
+	cmovne rax, rcx
+	mov rdi,rdx
+	ret
+?findDWORD@NT@@YAPEAK_KPEBKK@Z endp
+
+@retz proc
+	xor eax,eax
+	ret
+@retz endp
+
 _TEXT ENDS
 END

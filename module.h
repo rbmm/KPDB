@@ -2,17 +2,22 @@
 
 #include "pdb_util.h"
 
+void LoadNtModule(ULONG n, const ULONG ph[]);
+void DumpStack(PCSTR txt);
+ULONG HashString(PCSTR lpsz, ULONG hash = 0);
+
 class CModule : LIST_ENTRY
 {
 	PVOID _ImageBase;
 	ULONG _size;
+	ULONG _hash;
 	ULONG _nSymbols;
 	char _name[32];
 	RVAOFS _Symbols[];
 	//CHAR Names[];
-	void Init(PCSTR name, PVOID ImageBase, ULONG size)
+	void Init(ULONG hash, PCSTR name, PVOID ImageBase, ULONG size)
 	{
-		_size = size, _ImageBase = ImageBase;
+		_hash = hash, _size = size, _ImageBase = ImageBase;
 		strcpy_s(_name, _countof(_name), name);
 		DbgPrint("++CModule<%p>(%s) %p\n", this, name, ImageBase);
 	}
@@ -29,7 +34,6 @@ class CModule : LIST_ENTRY
 		DbgPrint("--CModule<%p>(%s) %p\n", this, _name, _ImageBase);
 	}
 
-	PVOID GetVaFromName(PCSTR Name);
 	PCSTR GetNameFromRva(ULONG rva, PULONG pdisp, PCSTR* ppname);
 public:
 
@@ -48,13 +52,17 @@ public:
 		ExFreePool(pv);
 	}
 
-	static NTSTATUS Create(PCSTR name, PVOID ImageBase, ULONG size);
+	static NTSTATUS Create(ULONG hash, PCSTR name, PVOID ImageBase, ULONG size);
 	static PVOID GetVaFromName(PCSTR pszModule, PCSTR Name);
 	static PCSTR GetNameFromVa(PVOID pv, PULONG pdisp, PCSTR* ppname);
 
+	PVOID GetVaFromName(PCSTR Name);
+	static CModule* ByName(PCSTR pszModule)
+	{
+		return ByHash(HashString(pszModule));
+	}
+
+	static CModule* ByHash(ULONG hash);
+
 	static void Cleanup();
 };
-
-void LoadNtModule(ULONG n, const ULONG ph[]);
-void DumpStack(PCSTR txt);
-ULONG HashString(PCSTR lpsz, ULONG hash = 0);

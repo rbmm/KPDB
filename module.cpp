@@ -7,7 +7,7 @@ _NT_BEGIN
 
 LIST_ENTRY CModule::s_head = { &s_head, &s_head };
 
-PVOID CModule::GetVaFromName(PCSTR pszModule, PCSTR Name)
+CModule* CModule::ByHash(ULONG hash)
 {
 	CModule* p = 0;
 	PLIST_ENTRY entry = &s_head;
@@ -16,10 +16,20 @@ PVOID CModule::GetVaFromName(PCSTR pszModule, PCSTR Name)
 	{
 		p = static_cast<CModule*>(entry);
 
-		if (!_stricmp(p->_name, pszModule))
+		if (p->_hash== hash)
 		{
-			return p->GetVaFromName(Name);
+			return p;
 		}
+	}
+
+	return 0;
+}
+
+PVOID CModule::GetVaFromName(PCSTR pszModule, PCSTR Name)
+{
+	if (CModule* p = ByName(pszModule))
+	{
+		return p->GetVaFromName(Name);
 	}
 
 	return 0;
@@ -102,7 +112,7 @@ __0:
 	goto __0;
 }
 
-NTSTATUS CModule::Create(PCSTR name, PVOID ImageBase, ULONG size)
+NTSTATUS CModule::Create(ULONG hash, PCSTR name, PVOID ImageBase, ULONG size)
 {
 	if (ImageBase == &__ImageBase) return 0;
 
@@ -179,7 +189,7 @@ NTSTATUS CModule::Create(PCSTR name, PVOID ImageBase, ULONG size)
 	{
 		if (CModule* pModule = ss._pModule)
 		{
-			pModule->Init(name, ImageBase, size);
+			pModule->Init(hash, name, ImageBase, size);
 			return STATUS_SUCCESS;
 		}
 

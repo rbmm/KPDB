@@ -29,9 +29,10 @@ void LoadNtModule(ULONG n, const ULONG ph[])
 					do 
 					{
 						PCSTR name = Modules->FullPathName + Modules->OffsetToFileName;
-						if (findDWORD(n, ph, HashString(name)))
+						ULONG hash = HashString(name);
+						if (findDWORD(n, ph, hash))
 						{
-							CModule::Create(name, Modules->ImageBase, Modules->ImageSize);
+							CModule::Create(hash, name, Modules->ImageBase, Modules->ImageSize);
 						}
 					} while (Modules++, --NumberOfModules);
 				}
